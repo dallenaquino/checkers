@@ -1,0 +1,91 @@
+import math
+import random
+
+from GameState import GameState
+from agent.Agent import DecisionTreeNode, Agent
+
+
+class MonteCarloNode(DecisionTreeNode):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.wins = 0
+        self.simulations = 0
+
+
+class MonteCarloAgent(Agent):
+    def __init__(self):
+        self.tree = MonteCarloNode()
+        self.select_heuristic = self.ucb1
+
+
+    def choose_move(self, game_state: GameState, num_iterations=500, prune=True):
+        if self.tree.game_state != game_state:
+            node = next((c for c in self.tree.children if c.game_state == game_state), None)
+            if node is not None:
+                self.tree = node
+            else:
+                self.tree = MonteCarloNode()
+                self.tree.game_state = game_state
+                self.generate_children(self.tree)
+        for _ in range(num_iterations):
+            self.iterate()
+        pass
+        best = max(self.tree.children, key=lambda n: n.simulations)
+        idx = self.tree.children.index(best)
+        move = self.tree.moves[idx]
+        if prune:
+            self.tree = best
+        return move
+
+    def iterate(self):
+        # Select
+        node = self.tree
+        while len(node.children) > 0:
+            node = max(node.children, key=self.select_heuristic)
+
+        # Expand
+        if node.simulations > 0:
+            self.generate_children(node)
+            if len(node.children):
+                node = node.children[0]
+        # Simulate
+        winner = self.simulate(node)
+        # Back-propagate
+        root_player = self.tree.game_state.current_player_index
+
+        while node is not None:
+            node.simulations += 1
+            if root_player == winner:
+                node.wins += 1
+            node = node.parent
+
+    @staticmethod
+    def ucb1(node, c=math.sqrt(2)) -> float:
+        if node.simulations == 0:
+            return math.inf
+        exploitation = node.wins / node.simulations
+        exploration = math.sqrt(math.log(node.parent.simulations, math.e) / node.simulations)
+        return exploitation + c * exploration
+
+    @staticmethod
+    def simulate(start_node: MonteCarloNode):
+        state = start_node.game_state
+        while not state.is_terminal():
+            moves = state.get_legal_moves()
+            move = random.sample(moves, 1)[0]
+            state = state.generate_successor(move)
+        return state.get_winner()
+
+
+    @staticmethod
+    def generate_children(node):
+        node.children.clear()
+        node.moves.clear()
+        if node.game_state is None:
+            return
+        node.moves = node.game_state.get_legal_moves()
+        for move in node.moves:
+            state = node.game_state.generate_successor(move)
+            new_node = MonteCarloNode(node)
+            new_node.game_state = state
+            node.children.append(new_node)
