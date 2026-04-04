@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Any
 
 from GameState import GameState
 from agent import Agent
@@ -11,11 +11,15 @@ class GameEngine(ABC):
         self._num_players = 2
         self._agents: list[Agent] = [*agents]
 
-    def play_game(self):
+    def play_game(self, state_logger: Any = None):
         while not self.current_state.is_terminal():
+            if state_logger is not None:
+                state_logger.log(self.current_state)
             move = self.get_next_move()
-            new_state = self.make_move(move)
-            self.current_state = new_state
+            self.make_move(move)
+
+        if state_logger is not None:
+            state_logger.log(self.current_state, -1 if self.current_state.current_player_index else 1)
 
     def get_next_move(self):
         current_player_idx = self.current_state.current_player_index

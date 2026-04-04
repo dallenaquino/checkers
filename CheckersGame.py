@@ -6,6 +6,7 @@ from typing import Generator
 
 from GameEngine import GameEngine
 from GameState import GameState
+from util import board_positions
 
 
 class Actions(Enum):
@@ -291,11 +292,41 @@ class CheckersGameState(GameState):
         if not found_jumps:
             yield from push_moves
 
+class StateLogger:
+    def __init__(self, starting_player=0):
+        self.starting_player = starting_player
+        self.score = 0
+        self.past_states = []
+
+    def log(self, state: CheckersGameState, score=None):
+        self.past_states.append(self.tokenize(state))
+        if score is not None:
+            self.score = score
+
+    @staticmethod
+    def tokenize(state: CheckersGameState):
+        token = 0
+        board = state.board
+        for i, j in board_positions():
+            piece = board[i][j]
+            token <<= 4
+            if piece.value <= CheckerboardCodes.BLACK_KING.value:
+                token |= (1 << piece.value)
+
+        return token
+
+    def save(self, file_name):
+        with open(file_name, 'ab') as f:
+            f.write(len(self.past_states).to_bytes(byteorder='little'))
+            f.write(self.starting_player.to_bytes(byteorder='little'))
+            for vector in self.past_states:
+                f.write(vector.to_bytes(16, byteorder='little'))
+            f.write(self.score.to_bytes(byteorder='little', signed=True))
 
 class CheckersGame(GameEngine):
     def __init__(self, *agents):
         super().__init__(*agents)
         self.current_state = CheckersGameState()
 
-    def make_move(self, move):
+    def make_move(self, move: CheckersMove):
         self.current_state = self.current_state.generate_successor(move)
