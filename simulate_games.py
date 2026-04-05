@@ -25,11 +25,12 @@ def agent_type(s: str):
             raise argparse.ArgumentTypeError(f"Unrecognized agent type: {s}")
 
 
-def reconstruct_state(vector: int):
+def reconstruct_state(vector: [int | bytes], player_index):
     state = CheckersGameState(True)
-    for r, c in list(board_positions())[::-1]:
-        nibble = vector & 0xf
-        vector >>= 4
+    if isinstance(vector, int):
+        vector = vector.to_bytes(16, byteorder='big')
+    for i, (r, c) in enumerate(board_positions()):
+        nibble = (vector[i // 2] >> (4 * ((i + 1) % 2))) & 0xf
         if not nibble:
             continue
         offset = -1
@@ -37,6 +38,7 @@ def reconstruct_state(vector: int):
             offset += 1
             nibble >>= 1
         state.board[r][c] = CheckerboardCodes(offset)
+    state.current_player_index = player_index
     return state
 
 
@@ -49,7 +51,7 @@ def sample_states(game_states: list[int], num_states=2):
     w /= w.sum()
     indices = np.random.choice(n, p=w, size=num_states, replace=False)
     for idx in indices:
-        yield reconstruct_state(game_states[idx])
+        yield reconstruct_state(game_states[idx], idx % 2)
 
 
 if __name__ == "__main__":
@@ -70,8 +72,8 @@ if __name__ == "__main__":
         split_args = shlex.split(line)
         args = line_parser.parse_args(split_args)
         print(f"Running {args.num_games} simulations of \"{split_args[0]}\" vs \"{split_args[1]}\"")
-        for i in range(args.num_games):
-            if (i + 1) % 50 == 0:
+        for i in range(1, args.num_games + 1):
+            if i % 50 == 0:
                 print(f"Simulation {i}")
             game_engine = CheckersGame(args.agent1, args.agent2)
             logger = StateLogger()

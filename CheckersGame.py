@@ -2,7 +2,7 @@ import copy
 import itertools
 from abc import ABC, abstractmethod
 from enum import Enum, auto
-from typing import Generator
+from typing import Generator, Literal
 
 from GameEngine import GameEngine
 from GameState import GameState
@@ -296,9 +296,17 @@ class CheckersGameState(GameState):
 
 class StateLogger:
     def __init__(self, starting_player=0):
-        self.starting_player = starting_player
+        self._starting_player = starting_player
         self.score = 0
         self.past_states = []
+
+    @property
+    def starting_player(self):
+        return self._starting_player
+
+    @starting_player.setter
+    def starting_player(self, val):
+        self._starting_player = int(val)
 
     def log(self, state: CheckersGameState, score=None):
         self.past_states.append(self.tokenize(state))
@@ -317,13 +325,13 @@ class StateLogger:
 
         return token
 
-    def save(self, file_name):
+    def save(self, file_name, endianness: Literal['big'] | Literal['little'] = 'big'):
         with open(file_name, 'ab') as f:
-            f.write(len(self.past_states).to_bytes(byteorder='little'))
-            f.write(self.starting_player.to_bytes(byteorder='little'))
+            f.write(len(self.past_states).to_bytes(2, byteorder=endianness))
+            f.write(int.to_bytes(self.starting_player, byteorder=endianness))
             for vector in self.past_states:
-                f.write(vector.to_bytes(16, byteorder='little'))
-            f.write(self.score.to_bytes(byteorder='little', signed=True))
+                f.write(vector.to_bytes(16, byteorder=endianness))
+            f.write(self.score.to_bytes(byteorder=endianness, signed=True))
 
 class CheckersGame(GameEngine):
     def __init__(self, *agents):
