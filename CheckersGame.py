@@ -20,7 +20,7 @@ class Actions(Enum):
     JUMP_SE = auto()
 
 class CheckerboardCodes(Enum):
-    RED_PIECE = auto()
+    RED_PIECE = 0
     RED_KING = auto()
     BLACK_PIECE = auto()
     BLACK_KING = auto()
@@ -138,9 +138,11 @@ class PromotionJumpMove(JumpMove, PromotionMove):
     pass
 
 class CheckersGameState(GameState):
-    def __init__(self):
+    def __init__(self, empty=False):
         super().__init__()
         self.board = [[CheckerboardCodes.DARK_SQUARE if (i + j) % 2 else CheckerboardCodes.LIGHT_SQUARE for j in range(8)] for i in range(8)]
+        if empty:
+            return
         for i in range(3):
             for j in range((i + 1) % 2, 8, 2):
                 self.board[i][j] = CheckerboardCodes.BLACK_PIECE
