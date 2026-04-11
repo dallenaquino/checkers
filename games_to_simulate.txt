@@ -1,0 +1,2 @@
+neural-net neural-net 2000 --model-file1 models/cnn_v0_0.keras --model-file2 models/cnn_v0_0.keras --save game_data/cnn_v0_0.bin
+neural-net neural-net 2000 --model-file1 models/resnet_v0_0.keras --model-file2 models/resnet_v0_0.keras --save game_data/resnet_v0_0.bin
