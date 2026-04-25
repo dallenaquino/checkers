@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Any
 
-from GameState import GameState
+from GameState import GameState, MoveInfo
 from agent import Agent
 
 
@@ -19,13 +19,15 @@ class GameEngine(ABC):
             self.make_move(move)
 
         if state_logger is not None:
-            state_logger.log(self.current_state, -1 if self.current_state.current_player_index else 1)
+            winner = self.current_state.get_winner()
+            score = 0 if winner is None else (-1) ** winner
+            state_logger.log(self.current_state, score)
 
-    def get_next_move(self):
+    def get_next_move(self) -> MoveInfo:
         current_player_idx = self.current_state.current_player_index
         move = self._agents[current_player_idx].choose_move(self.current_state)
         return move
 
     @abstractmethod
-    def make_move(self, move):
+    def make_move(self, move: MoveInfo):
         pass

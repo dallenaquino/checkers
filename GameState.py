@@ -1,4 +1,11 @@
 from abc import ABC, abstractmethod
+from typing import Iterable, Sized
+
+
+class MoveInfo:
+    def __init__(self, move, result=None):
+        self.move = move
+        self.result = result
 
 
 class GameState(ABC):
@@ -10,7 +17,7 @@ class GameState(ABC):
         pass
 
     @abstractmethod
-    def get_legal_moves(self):
+    def get_legal_moves(self) -> tuple[MoveInfo]:
         pass
 
     @abstractmethod

@@ -2,12 +2,12 @@ import random
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from GameState import GameState
+from GameState import GameState, MoveInfo
 
 
 class Agent(ABC):
     @abstractmethod
-    def choose_move(self, game_state: GameState):
+    def choose_move(self, game_state: GameState) -> MoveInfo:
         pass
 
 

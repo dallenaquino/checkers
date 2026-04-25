@@ -4,7 +4,8 @@ from typing import Optional
 import pygame
 from pygame._sdl2.video import Window
 
-from CheckersGame import CheckerboardCodes, CheckersMove, PushMove, JumpMove, PromotionMove
+from CheckersGame import CheckerboardCodes, CheckersMove, PushMove, JumpMove, PromotionMove, CheckersMoveInfo, \
+    CheckersGame
 from GameEngine import GameEngine
 
 
@@ -53,7 +54,7 @@ class SkipIteration(Exception):
 class CheckersUI:
     
     def __init__(self, game_engine):
-        self._game_engine: GameEngine = game_engine
+        self._game_engine: CheckersGame = game_engine
 
         self._board_image = None
         self._original_board_width = None
@@ -94,6 +95,7 @@ class CheckersUI:
         in_motion = False
         sprite_positions = None
         running = True
+        printed_winner = False
         while True:
             for e in pygame.event.get():
                 if e.type == pygame.QUIT:
@@ -106,13 +108,18 @@ class CheckersUI:
 
             if self._game_engine.current_state.is_terminal() and not in_motion:
                 # TODO: display winner
+                if not printed_winner:
+                    print(f'Winner: {self._game_engine.current_state.get_winner()}')
+                    printed_winner = True
                 continue
 
+            print(self._game_engine.current_state.moves_since_capture)
             try:
                 if not in_motion:
                     # A new move can be made
-                    move: CheckersMove = self._game_engine.get_next_move()
-                    self._game_engine.make_move(move)
+                    move_info: CheckersMoveInfo = self._game_engine.get_next_move()
+                    self._game_engine.make_move(move_info)
+                    move = move_info.move
                     r, c = move.starting_coords
                     if self._sprite_grid[r][c] is None:
                         raise SkipIteration
@@ -132,7 +139,7 @@ class CheckersUI:
                         self._sprite_grid[r][c] = None
                         if isinstance(move, PromotionMove):
                             # Change sprite image to king
-                            new_type = sprite.type.promote()
+                            new_type = CheckerboardCodes.promote(sprite.type)
                             new_sprite = CheckerPieceSprite(new_type, sprite.rect.center, sprite.rect.size)
                             self._sprite_grid[ending_r][ending_c] = new_sprite
                             self._sprite_group.add(new_sprite)

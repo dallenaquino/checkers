@@ -1,30 +1,29 @@
-import itertools
 from typing import Iterable
 
-from CheckersGame import CheckersGameState, CheckerboardCodes, PromotionJumpMove, JumpMove, PushMove, PromotionPushMove, \
-    CheckersMove
+from CheckersGame import CheckersGameState, PromotionJumpMove, JumpMove, PushMove, PromotionPushMove, \
+    CheckersMove, RED_PIECE, RED_KING, BLACK_PIECE, BLACK_KING, CheckersMoveInfo
 from agent.AlphaBetaAgent import AlphaBetaAgent
+from util import board_positions
 
 
 class CheckersAlphaBetaAgent(AlphaBetaAgent):
-    @classmethod
-    def eval(cls, state: CheckersGameState, player_index=0):
+    def eval(self, state: CheckersGameState):
         if state.is_terminal():
-            return 1 if state.get_winner() == player_index else -1
+            return 0 if (winner:= state.get_winner()) is None else -1 if winner else 1
         board = state.board
-        dark_squares = tuple((i, j) for i, j in itertools.permutations(range(8), 2) if (i + j) % 2)
-        red_regular = tuple(filter(lambda pos: board[pos[0]][pos[1]] == CheckerboardCodes.RED_PIECE, dark_squares))
-        red_king = tuple(filter(lambda pos: board[pos[0]][pos[1]] == CheckerboardCodes.RED_KING, dark_squares))
-        black_regular = tuple(filter(lambda pos: board[pos[0]][pos[1]] == CheckerboardCodes.BLACK_PIECE, dark_squares))
-        black_king = tuple(filter(lambda pos: board[pos[0]][pos[1]] == CheckerboardCodes.BLACK_KING, dark_squares))
-        value = 2 * (len(black_king) - len(red_king)) + (len(black_regular) - len(red_regular))
-        if state.current_player_index != player_index:
-            value *= -1
-        total_pieces = len(red_regular) + len(red_king) + len(black_regular) + len(black_king)
-        return value / total_pieces
+        # dark_squares = tuple((i, j) for i, j in itertools.permutations(range(8), 2) if (i + j) % 2)
+        counts = [0] * 4
+        for r, c in board_positions:
+            piece = board[4 * r + c // 2]
+            if piece > BLACK_KING:
+                continue
+            counts[piece] += 1
+        value = 2 * (counts[BLACK_KING] - counts[RED_KING]) + counts[BLACK_PIECE] - counts[RED_PIECE]
+        return value / sum(counts)
 
-    def reorder_moves(self, moves: Iterable[CheckersMove]) -> Iterable[CheckersMove]:
-        def move_priority(move: CheckersMove):
+    def reorder_moves(self, state, moves: Iterable[CheckersMove]) -> Iterable[CheckersMove]:
+        def move_priority(move_info: CheckersMoveInfo):
+            move = move_info.move
             final_coord = move.compute_final_coord()
             priority = 0
             if isinstance(move, JumpMove):

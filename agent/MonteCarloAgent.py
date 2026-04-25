@@ -1,7 +1,7 @@
 import math
 import random
 
-from GameState import GameState
+from GameState import GameState, MoveInfo
 from agent.Agent import DecisionTreeNode, Agent
 
 
@@ -13,28 +13,28 @@ class MonteCarloNode(DecisionTreeNode):
 
 
 class MonteCarloAgent(Agent):
-    def __init__(self):
+    def __init__(self, iterations_per_turn=500):
         self.tree = MonteCarloNode()
         self.select_heuristic = self.ucb1
+        self.iterations = iterations_per_turn
 
 
-    def choose_move(self, game_state: GameState, num_iterations=500, prune=True):
+    def choose_move(self, game_state: GameState) -> MoveInfo:
         if self.tree.game_state != game_state:
-            node = next((c for c in self.tree.children if c.game_state == game_state), None)
+            node = next(filter(lambda c: c.game_state == game_state, self.tree.children), None)
             if node is not None:
                 self.tree = node
             else:
                 self.tree = MonteCarloNode()
                 self.tree.game_state = game_state
                 self.generate_children(self.tree)
-        for _ in range(num_iterations):
+        for _ in range(self.iterations):
             self.iterate()
         pass
         best = max(self.tree.children, key=lambda n: n.simulations)
         idx = self.tree.children.index(best)
         move = self.tree.moves[idx]
-        if prune:
-            self.tree = best
+        self.tree = best
         return move
 
     def iterate(self):
@@ -72,7 +72,7 @@ class MonteCarloAgent(Agent):
         state = start_node.game_state
         while not state.is_terminal():
             moves = state.get_legal_moves()
-            move = random.sample(moves, 1)[0]
+            move = random.choice(moves)
             state = state.generate_successor(move)
         return state.get_winner()
 
@@ -80,12 +80,12 @@ class MonteCarloAgent(Agent):
     @staticmethod
     def generate_children(node):
         node.children.clear()
-        node.moves.clear()
+        node.moves = ()
         if node.game_state is None:
             return
         node.moves = node.game_state.get_legal_moves()
-        for move in node.moves:
-            state = node.game_state.generate_successor(move)
+        for move_info in node.moves:
+            state = node.game_state.generate_successor(move_info)
             new_node = MonteCarloNode(node)
             new_node.game_state = state
             node.children.append(new_node)
